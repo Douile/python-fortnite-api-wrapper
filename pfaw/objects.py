@@ -1,5 +1,6 @@
 from . import constants, utils
 
+
 class Base:
     def __init__(self, response):
         self.response = response
@@ -11,6 +12,10 @@ class Player(Base):
         self.name = self.response.get('displayName')
         self.id = self.response.get('id')
 
+    def __iter__(self):
+        yield 'name', self.name
+        yield 'id', self.id
+
 
 class BattleRoyale(Base):
     def __init__(self, response, platform):
@@ -19,6 +24,12 @@ class BattleRoyale(Base):
         self.duo = BattleRoyaleStats(response=self.response, platform=platform, mode='_p10')
         self.squad = BattleRoyaleStats(response=self.response, platform=platform, mode='_p9')
         self.all = BattleRoyaleStats(response=self.response, platform=platform, mode='_p')
+
+    def __iter__(self):
+        yield 'solo', dict(self.solo)
+        yield 'duo', dict(self.duo)
+        yield 'squad', dict(self.squad)
+        yield 'all', dict(self.all)
 
 
 class BattleRoyaleStats(Base):
@@ -60,6 +71,19 @@ class BattleRoyaleStats(Base):
                 elif 'placetop25_' in stat.get('name'):
                     self.top25 += stat.get('value')
 
+    def __iter__(self):
+        yield 'score', self.score
+        yield 'matches', self.matches
+        yield 'time', self.time
+        yield 'kills', self.kills
+        yield 'wins', self.wins
+        yield 'top3', self.top3
+        yield 'top5', self.top5
+        yield 'top6', self.top6
+        yield 'top10', self.top10
+        yield 'top12', self.top12
+        yield 'top25', self.top25
+
 
 class Store(Base):
     def __init__(self, response):
@@ -72,6 +96,12 @@ class Store(Base):
     def storefront_list(self):
         return [StoreFront(response) for response in self.response.get('storefronts')]
 
+    def __iter__(self):
+        yield 'storefronts', utils.dict_array(self.storefronts)
+        yield 'expiration', self.expiration
+        yield 'dailyPurchaseHrs', self.daily_purchase_hrs
+        yield 'refreshIntervalHrs', self.refresh_interval_hrs
+
 
 class StoreFront(Base):
     def __init__(self, response):
@@ -80,7 +110,11 @@ class StoreFront(Base):
         self.catalog_entries = self.catalog_entry_list()
 
     def catalog_entry_list(self):
-        return [CatalogEntry(response) for response in self.response.get('catalogEntries')]
+        return utils.class_array(CatalogEntry, self.response.get('catalogEntries'))
+
+    def __iter__(self):
+        yield 'name', self.name
+        yield 'catalogEntries', utils.dict_array(self.catalog_entries)
 
 
 class CatalogEntry(Base):
@@ -97,6 +131,15 @@ class CatalogEntry(Base):
     def price_list(self):
         return [Price(response) for response in self.response.get('prices')]
 
+    def __iter__(self):
+        yield 'offerId', self.offer_id
+        yield 'devName', self.dev_name
+        yield 'offerType', self.offer_type
+        yield 'prices', self.prices
+        yield 'title', self.title
+        yield 'description', self.description
+        yield 'refundable', self.refundable
+
 
 class Price(Base):
     def __init__(self, response):
@@ -107,6 +150,13 @@ class Price(Base):
         self.sale_expiration = self.response.get('saleExpiration')
         self.base_price = self.response.get('basePrice')
 
+    def __iter__(self):
+        yield 'currencyType', self.currency_type
+        yield 'regularPrice', self.regular_price
+        yield 'finalPrice', self.final_price
+        yield 'saleExpiration', self.sale_expiration
+        yield 'basePrice', self.base_price
+
 
 class News(Base):
     def __init__(self, status, response):
@@ -115,27 +165,55 @@ class News(Base):
 
         common = response.get('athenamessage').get('overrideablemessage')
         if common.get('message') is not None:
-            self.common = [common.get('message')]
+            self.common = utils.class_array(Message, [common.get('message')])
         elif common.get('messages') is not None:
-            self.common = common.get('messages')
+            self.common = utils.class_array(Message, common.get('messages'))
         else:
             self.common = None
 
         br = response.get('battleroyalenews').get('news')
         if br.get('message') is not None:
-            self.br = [br.get('message')]
+            self.br = utils.class_array(Message, [br.get('message')])
         elif br.get('messages') is not None:
-            self.br = br.get('messages')
+            self.br = utils.class_array(Message, br.get('messages'))
         else:
             self.br = None
 
         login = response.get('loginmessage').get('loginmessage')
         if login.get('message') is not None:
-            self.login = [login.get('message')]
+            self.login = utils.class_array(Message, [login.get('message')])
         elif login.get('messages') is not None:
-            self.login = login.get('messages')
+            self.login = utils.class_array(Message, login.get('messages'))
         else:
             self.login = None
+
+        emergency = response.get('emergencynotice').get('news')
+        if emergency.get('message') is not None:
+            self.emergency = utils.class_array(Message, [emergency.get('message')])
+        elif emergency.get('messages') is not None:
+            self.emergency = utils.class_array(Message, emergency.get('messages'))
+        else:
+            self.emergency = None
+
+    def __iter__(self):
+        yield 'status', self.status
+        yield 'common', utils.dict_array(self.common)
+        yield 'br', utils.dict_array(self.br)
+        yield 'login', utils.dict_array(self.login)
+        yield 'emergency', utils.dict_array(self.emergency)
+
+
+class Message:
+    def __init__(self, data):
+        self.hidden = data.get('hidden')
+        self.title = data.get('title')
+        self.body = data.get('body')
+
+    def __iter__(self):
+        yield 'hidden', self.hidden
+        yield 'title', self.title
+        yield 'body', self.body
+
 
 class PatchNotes(Base):
     def __init__(self, status, response):
@@ -146,22 +224,35 @@ class PatchNotes(Base):
         self.increment_count = response.get('incrementCount')
         self.total_blogs = response.get('blogTotal')
         self.totals = CategoryTotals(response.get('categoryTotals'))
-        self.blogs = []
-        blogs_raw = response.get('blog_List')
-        if blogs_raw is not None:
-            for blog in blogs_raw:
-                self.blogs.append(Blog(blog))
+        self.blogs = utils.class_array(Blog, response.get('blogList'))
+
+    def __iter__(self):
+        yield 'status', self.status
+        yield 'postCount', self.post_count
+        yield 'incrementCount', self.increment_count
+        yield 'totalBlogs', self.total_blogs
+        yield 'totals', dict(self.totals)
+        yield 'blogs', utils.dict_array(self.blogs)
+
 
 class CategoryTotals:
-    def __init__(self,data):
+    def __init__(self, data):
         self.community = data.get('community')
         self.events = data.get('events')
         self.patch_notes = data.get('patch_notes')
         self.announcements = data.get('announcements')
         self.all = data.get('all')
 
+    def __iter__(self):
+        yield 'community', self.community
+        yield 'events', self.events
+        yield 'patchNotes', self.patch_notes
+        yield 'announcements', self.announcements
+        yield 'all', self.all
+
+
 class Blog:
-    def __init__(self,data):
+    def __init__(self, data):
         self.trending = data.get('trending')
         self.no_top_image = data.get('noTopImage')
         self.image = data.get('image')
@@ -182,6 +273,25 @@ class Blog:
         self.categories = data.get('category')
         self.tags = data.get('tags')
         if self.slug is not None and self.locale is not None:
-            self.url = constants.blog.format(self.locale,self.slug)
+            self.url = constants.blog.format(self.locale, self.slug)
         else:
             self.url = None
+
+    def __iter__(self):
+        yield 'trending', self.trending
+        yield 'image', self.image
+        yield 'author', self.author
+        yield 'shareImage', self.share_image
+        yield 'title', self.title
+        yield 'htmlContent', self.html_content
+        yield 'trendingImage', self.trending_image
+        yield 'category', self.category
+        yield 'htmlShort', self.html_short
+        yield 'featured', self.featured
+        yield 'date', self.date
+        yield 'id', self.id
+        yield 'slug', self.slug
+        yield 'locale', self.locale
+        yield 'categories', self.categories
+        yield 'tags', self.tags
+        yield 'url', self.url
