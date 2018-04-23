@@ -161,7 +161,6 @@ class Price(Base):
 class News(Base):
     def __init__(self, response):
         super().__init__(response)
-        self.status = status
 
         common = response.get('athenamessage').get('overrideablemessage')
         if common.get('message') is not None:
