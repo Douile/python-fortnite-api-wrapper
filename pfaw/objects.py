@@ -159,39 +159,39 @@ class Price(Base):
 
 
 class News(Base):
-    def __init__(self, status, response):
+    def __init__(self, response):
         super().__init__(response)
         self.status = status
 
         common = response.get('athenamessage').get('overrideablemessage')
         if common.get('message') is not None:
-            self.common = utils.class_array(Message, [common.get('message')])
+            self.common = utils.class_array(NewsMessage, [common.get('message')])
         elif common.get('messages') is not None:
-            self.common = utils.class_array(Message, common.get('messages'))
+            self.common = utils.class_array(NewsMessage, common.get('messages'))
         else:
             self.common = None
 
         br = response.get('battleroyalenews').get('news')
         if br.get('message') is not None:
-            self.br = utils.class_array(Message, [br.get('message')])
+            self.br = utils.class_array(NewsMessage, [br.get('message')])
         elif br.get('messages') is not None:
-            self.br = utils.class_array(Message, br.get('messages'))
+            self.br = utils.class_array(NewsMessage, br.get('messages'))
         else:
             self.br = None
 
         login = response.get('loginmessage').get('loginmessage')
         if login.get('message') is not None:
-            self.login = utils.class_array(Message, [login.get('message')])
+            self.login = utils.class_array(NewsMessage, [login.get('message')])
         elif login.get('messages') is not None:
-            self.login = utils.class_array(Message, login.get('messages'))
+            self.login = utils.class_array(NewsMessage, login.get('messages'))
         else:
             self.login = None
 
         emergency = response.get('emergencynotice').get('news')
         if emergency.get('message') is not None:
-            self.emergency = utils.class_array(Message, [emergency.get('message')])
+            self.emergency = utils.class_array(NewsMessage, [emergency.get('message')])
         elif emergency.get('messages') is not None:
-            self.emergency = utils.class_array(Message, emergency.get('messages'))
+            self.emergency = utils.class_array(NewsMessage, emergency.get('messages'))
         else:
             self.emergency = None
 
@@ -201,18 +201,14 @@ class News(Base):
         yield 'br', utils.dict_array(self.br)
         yield 'login', utils.dict_array(self.login)
         yield 'emergency', utils.dict_array(self.emergency)
+        
 
-
-class Message:
-    def __init__(self, data):
-        self.hidden = data.get('hidden')
-        self.title = data.get('title')
-        self.body = data.get('body')
-
-    def __iter__(self):
-        yield 'hidden', self.hidden
-        yield 'title', self.title
-        yield 'body', self.body
+class NewsMessage(Base):
+    def __init__(self, response):
+        super().__init__(response)
+        self.image = self.response.get('image')
+        self.title = self.response.get('title')
+        self.body = self.response.get('body')
 
 
 class PatchNotes(Base):
@@ -233,6 +229,7 @@ class PatchNotes(Base):
         yield 'totalBlogs', self.total_blogs
         yield 'totals', dict(self.totals)
         yield 'blogs', utils.dict_array(self.blogs)
+
 
 
 class CategoryTotals:
